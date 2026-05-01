@@ -1,57 +1,42 @@
-import subprocess, json, os, time
+import json, base64, os, requests
 
-print("=== Installing Solana CLI ===")
-subprocess.run("sh -c '$(curl -sSfL https://release.anza.xyz/v1.18.18/install)'", shell=True, timeout=60)
-os.environ['PATH'] += ':/home/runner/.local/share/solana/install/active_release/bin'
+KP = [8, 201, 185, 57, 113, 84, 216, 128, 250, 235, 169, 101, 225, 211, 54, 48, 37, 220, 196, 86, 131, 117, 95, 74, 56, 50, 213, 69, 169, 34, 159, 98, 221, 201, 9, 6, 29, 57, 233, 161, 24, 32, 230, 188, 30, 178, 231, 237, 130, 251, 141, 81, 155, 163, 209, 5, 109, 190, 51, 98, 163, 170, 242, 90]
 
-# Generate keypair or use provided one
-print("\n=== Generating Solana Keypair ===")
-result = subprocess.run("solana-keygen new --no-bip39-passphrase --force -o keypair.json", 
-                       shell=True, capture_output=True, text=True)
-print(result.stdout)
-print(result.stderr)
+print("=== Using existing keypair ===")
+print(f"Public Key: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21")
 
-# Get public key
-result = subprocess.run("solana-keygen pubkey keypair.json", shell=True, capture_output=True, text=True)
-pubkey = result.stdout.strip()
-print(f"Public Key: {pubkey}")
-
-# Try multiple devnet faucets
+# Try multiple faucets  
 print("\n=== Trying Devnet Faucets ===")
 faucets = [
-    f"solana airdrop 1 {pubkey} --url devnet",
-    f"curl -s -X POST https://faucet.solana.com -d '{{\"jsonrpc\":\"2.0\",\"method\":\"requestAirdrop\",\"params\":[\"{pubkey}\",1000000000],\"id\":1}}' -H 'Content-Type: application/json'",
-    f"curl -s 'https://solfaucet.com/api/drip?address={pubkey}&amount=1&network=devnet'",
+    ("Solana official", f"https://api.devnet.solana.com", 
+     {"jsonrpc":"2.0","method":"requestAirdrop","params":["Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21",1000000000],"id":1}),
+    ("QuickNode", "https://api.devnet.solana.com",
+     {"jsonrpc":"2.0","method":"requestAirdrop","params":["Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21",1000000000],"id":1}),
 ]
 
-for cmd in faucets:
-    print(f"\n> {cmd[:80]}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=20)
-    print(result.stdout[:300])
-    if result.stderr:
-        print(f"ERR: {result.stderr[:200]}")
+for name, url, payload in faucets:
+    try:
+        r = requests.post(url, json=payload, timeout=10)
+        print(f"{name}: {r.status_code} - {r.text[:200]}")
+    except Exception as e:
+        print(f"{name}: {e}")
 
-# Check balance
-time.sleep(5)
-result = subprocess.run(f"solana balance {pubkey} --url devnet", shell=True, capture_output=True, text=True)
-print(f"\n=== Balance ===")
-print(result.stdout)
+# Also try HTTP faucets
+print("\n=== HTTP Faucets ===")
+http_faucets = [
+    f"https://faucet.solana.com/api/request?address={pubkey}&amount=1000000000",
+    f"https://solfaucet.com/api/drip?address={pubkey}&amount=1&network=devnet",
+]
 
-# Save keypair for later use
-with open("keypair.json") as f:
-    kp = f.read()
-print(f"\n=== KEYPAIR (save this) ===")
-print(kp[:200])
+for url in http_faucets:
+    try:
+        r = requests.get(url, timeout=10)
+        print(f"HTTP {r.status_code}: {r.text[:200]}")
+    except Exception as e:
+        print(f"HTTP: {e}")
 
-# List available programs for airdrop farming
-print("\n=== Current Solana Protocols (potential airdrops) ===")
-protocols = ["Jupiter", "Jito", "Marginfi", "Kamino", "Drift", "Zeta", "Parcl", "Tensor"]
-for p in protocols:
-    print(f"  - {p}")
-
-# Save results
+# Save result
 with open("result.txt", "w") as f:
-    f.write(f"PUBKEY: {pubkey}\n")
-    f.write(f"KEYPAIR_JSON: {kp}\n")
-    f.write(f"BALANCE: {result.stdout.strip()}\n")
-    f.write("Next: Use this keypair to interact with Solana protocols for airdrop eligibility\n")
+    f.write(f"PUBKEY: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21\n")
+    f.write(f"ATTEMPTED_FAUCETS: done\n")
+    f.write("NEXT: If got SOL, run protocol interactions\n")
