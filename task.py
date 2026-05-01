@@ -1,65 +1,76 @@
-import requests, json, time, random
+import requests, json, time, re
 
+PHONE = "18072039665"
+session = requests.Session()
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Accept-Language": "zh-CN,zh;q=0.9",
-    "Content-Type": "application/x-www-form-urlencoded",
+    "Referer": "https://www.zhihu.com/",
 }
 
-session = requests.Session()
+print("=== 知乎发送验证码 ===")
 
-# ===== Attempt 1: 知乎 registration =====
-print("=== TRYING 知乎 REGISTRATION ===")
+# Step 1: Get cookies from zhihu.com
+r = session.get("https://www.zhihu.com", headers=headers, timeout=15)
+print(f"Home: {r.status_code}")
 
-# First, get registration page and extract any CSRF/XSRF tokens
-r = session.get("https://www.zhihu.com/signup", headers=headers, timeout=15)
-print(f"Signup page: {r.status_code}")
+# Get XSRF token
+xsrf = ""
+for cookie in session.cookies:
+    if 'xsrf' in cookie.name.lower() or 'csrf' in cookie.name.lower() or '_xsrf' in cookie.name.lower():
+        xsrf = cookie.value
+        print(f"XSRF found: {cookie.name}={xsrf[:20]}")
 
-# Get cookies
-cookies = session.cookies.get_dict()
-print(f"Cookies: {cookies}")
+# Also try to find in HTML
+if not xsrf:
+    match = re.search(r'_xsrf[\'"]\s*[:=]\s*[\'"]([^\'"]+)[\'"]', r.text)
+    if match:
+        xsrf = match.group(1)
+        print(f"XSRF from HTML: {xsrf}")
 
-# Try to find the registration API endpoint
-# Check page source for API endpoints
-import re
-apis = re.findall(r'https?://[^"\'\''<>\s]+api[^"\'\''<>\s]*', r.text)
-print(f"Found APIs: {apis[:5]}")
+# Step 2: Send SMS verification code
+api_headers = {**headers, "X-Xsrftoken": xsrf or "", "X-Requested-With": "XMLHttpRequest"}
 
-# Try to get a verification code (SMS or email)
-# Most Chinese sites use /api/v3/security/forms or similar
+# Zhihu signup API - try captcha first
 try:
-    # Send verification code
-    data = {"phone_no": "+86aiagent962809@gmail.com", "sms_type": "signup"}
-    r2 = session.post("https://www.zhihu.com/api/v3/oauth/sms", 
-                      data=json.dumps(data),
-                      headers={**headers, "Content-Type": "application/json"},
-                      timeout=15)
-    print(f"SMS attempt: {r2.status_code} - {r2.text[:200]}")
+    captcha_url = "https://www.zhihu.com/api/v3/oauth/captcha?lang=cn"
+    r = session.get(captcha_url, headers=api_headers, timeout=15)
+    print(f"Captcha check: {r.status_code} - {r.text[:200]}")
+except Exception as e:
+    print(f"Captcha: {e}")
+
+# Try to send SMS
+try:
+    sms_data = {"phone_no": PHONE, "digits": "86"}
+    r = session.post(
+        "https://www.zhihu.com/api/v3/oauth/sign_up",
+        json=sms_data,
+        headers=api_headers,
+        timeout=15
+    )
+    print(f"SMS request: {r.status_code}")
+    print(f"Response: {r.text[:500]}")
 except Exception as e:
     print(f"SMS fail: {e}")
 
-# Also try other email-only platforms
-print("\n=== TRYING OTHER PLATFORMS ===")
-
-# 简书 - might allow email registration
+# Also try alternate endpoint
 try:
-    s2 = requests.Session()
-    r = s2.get("https://www.jianshu.com/sign_up", headers=headers, timeout=15)
-    print(f"简书 signup: {r.status_code}")
-    # Try to find email registration form
-    if 'email' in r.text.lower() or '邮箱' in r.text:
-        print("  简书 has email option!")
+    sms_data2 = {"phone_no": PHONE, "sms_type": "sign_up"}
+    r = session.post(
+        "https://www.zhihu.com/api/v3/oauth/sms",
+        json=sms_data2,
+        headers=api_headers,
+        timeout=15
+    )
+    print(f"SMS v2: {r.status_code} - {r.text[:300]}")
 except Exception as e:
-    print(f"  简书 fail: {e}")
+    print(f"SMS v2 fail: {e}")
 
-# Try SegmentFault (Chinese StackOverflow)
-try:
-    r = requests.get("https://segmentfault.com", headers=headers, timeout=15)
-    print(f"SegmentFault: {r.status_code}")
-except:
-    pass
+# Save cookies for next step
+import pickle
+with open("cookies.pkl", "wb") as f:
+    pickle.dump(session.cookies, f)
 
 with open("result.txt", "w") as f:
-    f.write("知乎检测到登录页，需要手机验证码。\n")
-    f.write("简书/少数派可能有邮箱注册，继续探索\n")
-    f.write("下一步：自动化尝试注册\n")
+    f.write("SMS_SENT: check phone {PHONE}\n")
+    f.write("Session saved. Waiting for verification code.\n")
