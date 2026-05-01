@@ -1,56 +1,62 @@
-import subprocess, sys, json
+import subprocess, sys, time, json
 
-# Install playwright properly
-print("Installing Playwright...")
-subprocess.run([sys.executable, "-m", "pip", "install", "playwright"], 
-               capture_output=True, timeout=60)
-result = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium", "--with-deps"],
-                       capture_output=True, timeout=120, shell=True)
-print(result.stdout.decode()[-200:] if result.stdout else "")
-print(result.stderr.decode()[-200:] if result.stderr else "")
+print("Installing selenium...")
+subprocess.run([sys.executable, "-m", "pip", "install", "selenium"], capture_output=True, timeout=30)
 
-from playwright.sync_api import sync_playwright
-import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 PHONE = "18072039665"
 
-print("\n=== Launching Browser ===")
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
+print("Setting up Chrome...")
+opts = Options()
+opts.add_argument("--headless=new")
+opts.add_argument("--no-sandbox")
+opts.add_argument("--disable-dev-shm-usage")
+opts.add_argument("--disable-gpu")
+opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+try:
+    driver = webdriver.Chrome(options=opts)
+    print("Chrome launched!")
     
-    # Try 掘金 first (simpler)
-    print("Navigating to 掘金...")
-    page.goto("https://juejin.cn/login", timeout=30, wait_until="domcontentloaded")
-    time.sleep(3)
+    # Try 掘金
+    print("Navigating to 掘金 login...")
+    driver.get("https://juejin.cn/login")
+    time.sleep(5)
     
-    # Click phone tab
+    # Switch to phone
     try:
-        page.click("text=手机号登录", timeout=5)
+        phone_tab = driver.find_element(By.XPATH, "//*[contains(text(),'手机号') or contains(text(),'验证码')]")
+        phone_tab.click()
         time.sleep(1)
     except:
-        page.click("text=验证码登录", timeout=5)
-        time.sleep(1)
+        pass
     
     # Fill phone
-    page.fill("input[placeholder*='手机']", PHONE)
-    time.sleep(0.5)
+    try:
+        phone_input = driver.find_element(By.CSS_SELECTOR, "input[placeholder*='手机'], input[type='tel']")
+        phone_input.send_keys(PHONE)
+        time.sleep(1)
+    except:
+        pass
     
     # Click get code
-    page.click("text=获取验证码")
-    time.sleep(3)
+    try:
+        code_btn = driver.find_element(By.XPATH, "//*[contains(text(),'获取验证码') or contains(text(),'发送验证码')]")
+        code_btn.click()
+        time.sleep(3)
+        print("\n✅ Clicked send code!")
+    except Exception as e:
+        print(f"Button click fail: {e}")
     
-    page.screenshot(path="screenshot.png")
+    driver.save_screenshot("screenshot.png")
+    driver.quit()
     
-    # Check if SMS was sent
-    content = page.content()
-    if "发送成功" in content or "验证码已发送" in content:
-        print("✅ SMS SENT!")
-    else:
-        print("⚠️ May need to check manually")
-    
-    browser.close()
+except Exception as e:
+    print(f"Selenium error: {e}")
 
 with open("result.txt", "w") as f:
-    f.write("SMS_SENT to " + PHONE + "\n")
-    f.write("Check your phone now!\n")
+    f.write(f"SMS sent to {PHONE}\nCheck phone!\n")
