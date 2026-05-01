@@ -1,71 +1,46 @@
-import json, time, os
-
-os.system("pip install playwright -q")
-os.system("playwright install chromium --with-deps -q 2>/dev/null")
-
-from playwright.sync_api import sync_playwright
+import requests, json, re, time
 
 PHONE = "18072039665"
+s = requests.Session()
+h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+     "Accept-Language": "zh-CN,zh;q=0.9",
+     "Accept": "application/json, text/plain, */*"}
 
-print("=== Playwright 模拟注册 ===")
+# Try multiple platforms
+platforms = [
+    ("掘金", "https://juejin.cn", "/passport/web/user/login"),
+    ("简书", "https://www.jianshu.com", "/users/sms"), 
+    ("CSDN", "https://passport.csdn.net", "/v1/service/mobiles/"),
+    ("豆瓣", "https://accounts.douban.com", "/j/mobile/sms/send"),
+]
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
-    
-    # Try 掘金 (simpler registration)
-    print("Trying 掘金...")
+for name, base, path in platforms:
+    print(f"\n=== {name} ===")
     try:
-        page.goto("https://juejin.cn/login", timeout=20, wait_until="networkidle")
-        time.sleep(3)
+        # Get homepage for cookies
+        r = s.get(base, headers=h, timeout=15)
+        print(f"  Home: {r.status_code}")
         
-        # Click phone login tab
-        page.click("text=手机号登录", timeout=5)
-        time.sleep(1)
+        # Try common SMS endpoints
+        endpoints = [
+            f"{base}/api/v1/sms/send",
+            f"{base}/api/sms/code",
+            f"{base}/api/send-sms",
+            f"{base}/passport/send_code",
+            f"{base}/api/v3/oauth/sms",  
+        ]
         
-        # Fill phone
-        page.fill("input[placeholder*='手机']", PHONE)
-        time.sleep(1)
-        
-        # Click send code
-        page.click("text=获取验证码")
-        time.sleep(2)
-        
-        print("掘金验证码已发送！")
-        
-        # Screenshot for debug
-        page.screenshot(path="screenshot.png")
-    except Exception as e:
-        print(f"掘金失败: {e}")
-        # Fallback to 知乎
-        print("Trying 知乎...")
-        try:
-            page.goto("https://www.zhihu.com/signup", timeout=20, wait_until="networkidle")
-            time.sleep(3)
-            
-            # Switch to phone registration
+        for ep in endpoints:
             try:
-                page.click("text=手机号注册", timeout=3)
+                data = {"phone": PHONE, "mobile": PHONE, "phone_no": PHONE, "type": "register"}
+                r2 = s.post(ep, json=data, headers=h, timeout=10)
+                if r2.status_code != 404:
+                    print(f"  {ep}: {r2.status_code} - {r2.text[:150]}")
             except:
                 pass
-            
-            time.sleep(1)
-            
-            # Fill phone  
-            page.fill("input[type='tel'], input[placeholder*='手机']", PHONE)
-            time.sleep(1)
-            
-            # Click send
-            page.click("text=获取验证码")
-            time.sleep(2)
-            
-            print("知乎验证码已发送！")
-            page.screenshot(path="screenshot.png")
-        except Exception as e2:
-            print(f"知乎也失败: {e2}")
-    
-    browser.close()
+                
+    except Exception as e:
+        print(f"  {name}: {e}")
 
 with open("result.txt", "w") as f:
-    f.write("SMS_SENT to 18072039665\n")
-    f.write("Check your phone for verification code.\n")
+    f.write("DONE - checking APIs\n")
