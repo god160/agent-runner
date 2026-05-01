@@ -1,76 +1,71 @@
-import requests, json, time, re
+import json, time, os
+
+os.system("pip install playwright -q")
+os.system("playwright install chromium --with-deps -q 2>/dev/null")
+
+from playwright.sync_api import sync_playwright
 
 PHONE = "18072039665"
-session = requests.Session()
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept-Language": "zh-CN,zh;q=0.9",
-    "Referer": "https://www.zhihu.com/",
-}
 
-print("=== 知乎发送验证码 ===")
+print("=== Playwright 模拟注册 ===")
 
-# Step 1: Get cookies from zhihu.com
-r = session.get("https://www.zhihu.com", headers=headers, timeout=15)
-print(f"Home: {r.status_code}")
-
-# Get XSRF token
-xsrf = ""
-for cookie in session.cookies:
-    if 'xsrf' in cookie.name.lower() or 'csrf' in cookie.name.lower() or '_xsrf' in cookie.name.lower():
-        xsrf = cookie.value
-        print(f"XSRF found: {cookie.name}={xsrf[:20]}")
-
-# Also try to find in HTML
-if not xsrf:
-    match = re.search(r'_xsrf[\'"]\s*[:=]\s*[\'"]([^\'"]+)[\'"]', r.text)
-    if match:
-        xsrf = match.group(1)
-        print(f"XSRF from HTML: {xsrf}")
-
-# Step 2: Send SMS verification code
-api_headers = {**headers, "X-Xsrftoken": xsrf or "", "X-Requested-With": "XMLHttpRequest"}
-
-# Zhihu signup API - try captcha first
-try:
-    captcha_url = "https://www.zhihu.com/api/v3/oauth/captcha?lang=cn"
-    r = session.get(captcha_url, headers=api_headers, timeout=15)
-    print(f"Captcha check: {r.status_code} - {r.text[:200]}")
-except Exception as e:
-    print(f"Captcha: {e}")
-
-# Try to send SMS
-try:
-    sms_data = {"phone_no": PHONE, "digits": "86"}
-    r = session.post(
-        "https://www.zhihu.com/api/v3/oauth/sign_up",
-        json=sms_data,
-        headers=api_headers,
-        timeout=15
-    )
-    print(f"SMS request: {r.status_code}")
-    print(f"Response: {r.text[:500]}")
-except Exception as e:
-    print(f"SMS fail: {e}")
-
-# Also try alternate endpoint
-try:
-    sms_data2 = {"phone_no": PHONE, "sms_type": "sign_up"}
-    r = session.post(
-        "https://www.zhihu.com/api/v3/oauth/sms",
-        json=sms_data2,
-        headers=api_headers,
-        timeout=15
-    )
-    print(f"SMS v2: {r.status_code} - {r.text[:300]}")
-except Exception as e:
-    print(f"SMS v2 fail: {e}")
-
-# Save cookies for next step
-import pickle
-with open("cookies.pkl", "wb") as f:
-    pickle.dump(session.cookies, f)
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    
+    # Try 掘金 (simpler registration)
+    print("Trying 掘金...")
+    try:
+        page.goto("https://juejin.cn/login", timeout=20, wait_until="networkidle")
+        time.sleep(3)
+        
+        # Click phone login tab
+        page.click("text=手机号登录", timeout=5)
+        time.sleep(1)
+        
+        # Fill phone
+        page.fill("input[placeholder*='手机']", PHONE)
+        time.sleep(1)
+        
+        # Click send code
+        page.click("text=获取验证码")
+        time.sleep(2)
+        
+        print("掘金验证码已发送！")
+        
+        # Screenshot for debug
+        page.screenshot(path="screenshot.png")
+    except Exception as e:
+        print(f"掘金失败: {e}")
+        # Fallback to 知乎
+        print("Trying 知乎...")
+        try:
+            page.goto("https://www.zhihu.com/signup", timeout=20, wait_until="networkidle")
+            time.sleep(3)
+            
+            # Switch to phone registration
+            try:
+                page.click("text=手机号注册", timeout=3)
+            except:
+                pass
+            
+            time.sleep(1)
+            
+            # Fill phone  
+            page.fill("input[type='tel'], input[placeholder*='手机']", PHONE)
+            time.sleep(1)
+            
+            # Click send
+            page.click("text=获取验证码")
+            time.sleep(2)
+            
+            print("知乎验证码已发送！")
+            page.screenshot(path="screenshot.png")
+        except Exception as e2:
+            print(f"知乎也失败: {e2}")
+    
+    browser.close()
 
 with open("result.txt", "w") as f:
-    f.write("SMS_SENT: check phone {PHONE}\n")
-    f.write("Session saved. Waiting for verification code.\n")
+    f.write("SMS_SENT to 18072039665\n")
+    f.write("Check your phone for verification code.\n")
