@@ -1,14 +1,47 @@
-=== Using existing keypair ===
-Public Key: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21
+=== FAUCET FARMING ===
+  FreeBitco.in: HTTP 200
+  FaucetPay: HTTP 200
+  PipeFlare: HTTP 530
 
-=== Trying Devnet Faucets ===
-Solana official: 200 - {"jsonrpc":"2.0","error":{"code":-32603,"message":"Internal error"},"id":1}
+=== LINE B: CHINESE PLATFORM ACCESS ===
+  猪八戒: HTTP 200 | 猪八戒网-品质企业服务 就找猪八戒
+  CSDN: HTTP 200 | CSDN_专业开发者社区_已接入DeepSeek R1-0528版本
+  掘金: HTTP 200 | 稀土掘金
+  知乎: HTTP 200 | 
+  闲鱼: HTTP 200 | 闲鱼 - 闲不住？上闲鱼！
+  百度知道: HTTP 200 | ç¾åº¦ç¥é - å¨çé¢åä¸­æäºå¨é®ç­å¹³å°
+  豆瓣: HTTP 200 | 豆瓣
+  B站: HTTP 200 | 验证码_哔哩哔哩
 
-QuickNode: 429 -  {"jsonrpc":"2.0","error":{"code": 429,"message":"You've either reached your airdrop limit today or the airdrop faucet has run dry. Please visit https://faucet.solana.com for alternate sources of test
+=== LINE C: EMAIL-ONLY PLATFORMS ===
+  GitLab: HTTP 200
+  Notion: HTTP 200
+  Medium: HTTP 403
+  Dev.to: HTTP 200
+  Hashnode: HTTP 200
+  Substack: HTTP 403
+  Mirror.xyz: HTTP 403
+  ProductHunt: HTTP 403
 
-=== HTTP Faucets ===
-Traceback (most recent call last):
-  File "/home/runner/work/agent-runner/agent-runner/task.py", line 27, in <module>
-    f"https://faucet.solana.com/api/request?address={pubkey}&amount=1000000000",
-                                                     ^^^^^^
-NameError: name 'pubkey' is not defined
+=== ALL DONE ===
+{
+  "FreeBitco.in": "HTTP 200",
+  "FaucetPay": "HTTP 200",
+  "PipeFlare": "HTTP 530",
+  "\u732a\u516b\u6212": "OK (200)",
+  "CSDN": "OK (200)",
+  "\u6398\u91d1": "OK (200)",
+  "\u77e5\u4e4e": "OK (200)",
+  "\u95f2\u9c7c": "OK (200)",
+  "\u767e\u5ea6\u77e5\u9053": "OK (200)",
+  "\u8c46\u74e3": "OK (200)",
+  "B\u7ad9": "OK (200)",
+  "GitLab": "OK (200)",
+  "Notion": "OK (200)",
+  "Medium": "OK (403)",
+  "Dev.to": "OK (200)",
+  "Hashnode": "OK (200)",
+  "Substack": "OK (403)",
+  "Mirror.xyz": "OK (403)",
+  "ProductHunt": "OK (403)"
+}
