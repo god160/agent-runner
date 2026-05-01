@@ -1,29 +1,14 @@
-sh: 1: SOLANA_RELEASE=v1.18.18: not found
-=== Installing Solana CLI ===
-
-=== Generating Solana Keypair ===
-
-/bin/sh: 1: solana-keygen: not found
-
-Public Key: 
+=== Using existing keypair ===
+Public Key: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21
 
 === Trying Devnet Faucets ===
+Solana official: 200 - {"jsonrpc":"2.0","error":{"code":-32603,"message":"Internal error"},"id":1}
 
-> solana airdrop 1  --url devnet
+QuickNode: 429 -  {"jsonrpc":"2.0","error":{"code": 429,"message":"You've either reached your airdrop limit today or the airdrop faucet has run dry. Please visit https://faucet.solana.com for alternate sources of test
 
-ERR: /bin/sh: 1: solana: not found
-
-
-> curl -s -X POST https://faucet.solana.com -d '{"jsonrpc":"2.0","method":"request
-<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="preload" href="/_next/static/media/e4af272ccee01ff0-s.p.woff2" as="font" crossorigin="" type="font/woff2"/><link rel="stylesheet" href="/_next/static/css/d17aa7
-
-> curl -s 'https://solfaucet.com/api/drip?address=&amount=1&network=devnet'
-<!DOCTYPE html><html><head><meta charSet="utf-8" data-next-head=""/><meta name="viewport" content="width=device-width" data-next-head=""/><title data-next-head="">404: This page could not be found</title><link rel="shortcut icon" href="/favicon.ico"/><script async="" src="https://pagead2.googlesyndi
-
-=== Balance ===
-
+=== HTTP Faucets ===
 Traceback (most recent call last):
-  File "/home/runner/work/agent-runner/agent-runner/task.py", line 41, in <module>
-    with open("keypair.json") as f:
-         ^^^^^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: 'keypair.json'
+  File "/home/runner/work/agent-runner/agent-runner/task.py", line 27, in <module>
+    f"https://faucet.solana.com/api/request?address={pubkey}&amount=1000000000",
+                                                     ^^^^^^
+NameError: name 'pubkey' is not defined
