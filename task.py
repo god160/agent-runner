@@ -1,62 +1,96 @@
-import subprocess, sys, time, json
+import subprocess, sys, time
 
-print("Installing selenium...")
-subprocess.run([sys.executable, "-m", "pip", "install", "selenium"], capture_output=True, timeout=30)
+subprocess.run([sys.executable, "-m", "pip", "install", "selenium"], capture_output=True)
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 
 PHONE = "18072039665"
+DEBUG = []
 
-print("Setting up Chrome...")
 opts = Options()
 opts.add_argument("--headless=new")
 opts.add_argument("--no-sandbox")
 opts.add_argument("--disable-dev-shm-usage")
-opts.add_argument("--disable-gpu")
+opts.add_argument("--window-size=1920,1080")
 opts.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
+driver = webdriver.Chrome(options=opts)
+
+# Try zhihu first - simpler signup
+print("=== Trying Zhihu ===")
+driver.get("https://www.zhihu.com/signup")
+time.sleep(4)
+driver.save_screenshot("zhihu_1.png")
+DEBUG.append(f"Zhihu URL: {driver.current_url[:80]}")
+
+# Switch to phone reg
 try:
-    driver = webdriver.Chrome(options=opts)
-    print("Chrome launched!")
-    
-    # Try 掘金
-    print("Navigating to 掘金 login...")
-    driver.get("https://juejin.cn/login")
-    time.sleep(5)
-    
-    # Switch to phone
-    try:
-        phone_tab = driver.find_element(By.XPATH, "//*[contains(text(),'手机号') or contains(text(),'验证码')]")
-        phone_tab.click()
-        time.sleep(1)
-    except:
-        pass
-    
-    # Fill phone
-    try:
-        phone_input = driver.find_element(By.CSS_SELECTOR, "input[placeholder*='手机'], input[type='tel']")
-        phone_input.send_keys(PHONE)
-        time.sleep(1)
-    except:
-        pass
-    
-    # Click get code
-    try:
-        code_btn = driver.find_element(By.XPATH, "//*[contains(text(),'获取验证码') or contains(text(),'发送验证码')]")
-        code_btn.click()
-        time.sleep(3)
-        print("\n✅ Clicked send code!")
-    except Exception as e:
-        print(f"Button click fail: {e}")
-    
-    driver.save_screenshot("screenshot.png")
-    driver.quit()
-    
+    # Look for phone tab
+    tabs = driver.find_elements(By.XPATH, "//*[contains(text(),'手机') or contains(text(),'phone')]")
+    for t in tabs:
+        try:
+            if t.is_displayed():
+                t.click()
+                DEBUG.append(f"Clicked: {t.text[:30]}")
+                time.sleep(1)
+                break
+        except:
+            pass
 except Exception as e:
-    print(f"Selenium error: {e}")
+    DEBUG.append(f"Tab fail: {e}")
+
+# Find and fill phone input
+try:
+    inputs = driver.find_elements(By.TAG_NAME, "input")
+    for inp in inputs:
+        tp = inp.get_attribute("type") or ""
+        ph = inp.get_attribute("placeholder") or ""
+        if tp in ["tel", "text", "number"] and ("手机" in ph or "phone" in ph.lower() or "mobile" in ph.lower() or not ph):
+            inp.click()
+            inp.clear()
+            inp.send_keys(PHONE)
+            DEBUG.append(f"Filled: type={tp} placeholder={ph[:30]}")
+            time.sleep(1)
+            break
+except Exception as e:
+    DEBUG.append(f"Fill fail: {e}")
+
+# Try to find and click send code button
+driver.save_screenshot("zhihu_2.png")
+try:
+    btns = driver.find_elements(By.XPATH, "//*[contains(text(),'获取验证码') or contains(text(),'发送') or contains(text(),'验证码') or contains(text(),'Send')]")
+    for btn in btns:
+        try:
+            if btn.is_displayed() and btn.is_enabled():
+                DEBUG.append(f"Clicking: {btn.text[:30]}")
+                btn.click()
+                time.sleep(3)
+                break
+        except:
+            pass
+except Exception as e:
+    DEBUG.append(f"Btn fail: {e}")
+
+driver.save_screenshot("zhihu_3.png")
+
+# Check for captcha
+page_text = driver.page_source
+if "captcha" in page_text.lower() or "滑块" in page_text or "验证" in page_text:
+    DEBUG.append("⚠️ CAPTCHA detected!")
+if "发送成功" in page_text or "已发送" in page_text:
+    DEBUG.append("✅ SMS sent confirmation found!")
+if "频繁" in page_text or "稍后再试" in page_text:
+    DEBUG.append("⚠️ Rate limited!")
+
+driver.quit()
+
+result_text = "\n".join(DEBUG)
+print(result_text)
 
 with open("result.txt", "w") as f:
-    f.write(f"SMS sent to {PHONE}\nCheck phone!\n")
+    f.write(f"PHONE: {PHONE}\n")
+    f.write(result_text)
+    f.write("\n\n如果没收到验证码，请查看截图：\n")
+    f.write("https://github.com/god160/agent-runner (查看 zhihu_*.png)\n")
