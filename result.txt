@@ -1,28 +1,4 @@
-=== 知乎 ===
-Signup page: HTTP 200
-  ✅ Email registration option found!
-
-=== 掘金 ===
-Home: HTTP 200
-
-=== CSDN ===
-Home: HTTP 200
-
-=== 简书 ===
-Signup: HTTP 200
-
-=== 少数派 ===
-Signup: HTTP 200
-
-=== 百度知道 ===
-Home: HTTP 200
-
-=== RESULTS ===
-{
-  "zhihu": "EMAIL_REG_OK",
-  "juejin": "HTTP200",
-  "csdn": "HTTP200",
-  "jianshu": "HTTP200",
-  "sspai": "HTTP200",
-  "baidu_zhidao": "HTTP200"
-}
+  File "/home/runner/work/agent-runner/agent-runner/task.py", line 25
+    apis = re.findall(r'https?://[^"\'\''<>\s]+api[^"\'\''<>\s]*', r.text)
+                                         ^^
+SyntaxError: invalid syntax
