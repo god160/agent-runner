@@ -1,53 +1,57 @@
-import requests, json
+import subprocess, json, os, time
 
-print("=== NETWORK TEST ===")
-# Test connectivity
-tests = {
-    "google": "https://www.google.com",
-    "binance": "https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT",
-    "bsc_rpc": "https://1rpc.io/bsc",
-    "solana_rpc": "https://api.devnet.solana.com",
-    "coingecko": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
-    "bountycaster": "https://www.bountycaster.xyz/api/bounties?status=open&limit=5",
-    "dework": "https://api.dework.xyz/v1/tasks?limit=5",
-    "onlydust": "https://app.onlydust.com/api/projects",
-    "gitcoin": "https://api.gitcoin.co/v2/grants",
-}
+print("=== Installing Solana CLI ===")
+subprocess.run("sh -c '$(curl -sSfL https://release.anza.xyz/v1.18.18/install)'", shell=True, timeout=60)
+os.environ['PATH'] += ':/home/runner/.local/share/solana/install/active_release/bin'
 
-for name, url in tests.items():
-    try:
-        r = requests.get(url, timeout=10)
-        print(f"✅ {name}: HTTP {r.status_code}")
-        if r.status_code == 200:
-            try:
-                data = r.json()
-                preview = json.dumps(data)[:200]
-                print(f"   Data: {preview}")
-            except:
-                print(f"   Text: {r.text[:100]}")
-    except Exception as e:
-        print(f"❌ {name}: {str(e)[:80]}")
+# Generate keypair or use provided one
+print("\n=== Generating Solana Keypair ===")
+result = subprocess.run("solana-keygen new --no-bip39-passphrase --force -o keypair.json", 
+                       shell=True, capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
 
-# Search for bounties on Bountycaster
-print("\n=== BOUNTYCASTER BOUNTIES ===")
-try:
-    r = requests.get("https://www.bountycaster.xyz/api/bounties?status=open&limit=10", timeout=10)
-    if r.status_code == 200:
-        bounties = r.json()
-        for b in bounties[:10]:
-            print(f"💰 {b.get('reward','?')} {b.get('token','USDC')} - {str(b.get('title',''))[:80]}")
-except Exception as e:
-    print(f"Failed: {e}")
+# Get public key
+result = subprocess.run("solana-keygen pubkey keypair.json", shell=True, capture_output=True, text=True)
+pubkey = result.stdout.strip()
+print(f"Public Key: {pubkey}")
 
-# Search OnlyDust
-print("\n=== ONLYDUST PROJECTS ===")
-try:
-    r = requests.get("https://app.onlydust.com/api/projects?sort=contributors_count", timeout=10)
-    if r.status_code == 200:
-        projects = r.json()
-        for p in projects[:5]:
-            print(f"📦 {p.get('name','?')} - {p.get('description','')[:80]}")
-except Exception as e:
-    print(f"Failed: {e}")
+# Try multiple devnet faucets
+print("\n=== Trying Devnet Faucets ===")
+faucets = [
+    f"solana airdrop 1 {pubkey} --url devnet",
+    f"curl -s -X POST https://faucet.solana.com -d '{{\"jsonrpc\":\"2.0\",\"method\":\"requestAirdrop\",\"params\":[\"{pubkey}\",1000000000],\"id\":1}}' -H 'Content-Type: application/json'",
+    f"curl -s 'https://solfaucet.com/api/drip?address={pubkey}&amount=1&network=devnet'",
+]
 
-print("\n=== DONE ===")
+for cmd in faucets:
+    print(f"\n> {cmd[:80]}")
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=20)
+    print(result.stdout[:300])
+    if result.stderr:
+        print(f"ERR: {result.stderr[:200]}")
+
+# Check balance
+time.sleep(5)
+result = subprocess.run(f"solana balance {pubkey} --url devnet", shell=True, capture_output=True, text=True)
+print(f"\n=== Balance ===")
+print(result.stdout)
+
+# Save keypair for later use
+with open("keypair.json") as f:
+    kp = f.read()
+print(f"\n=== KEYPAIR (save this) ===")
+print(kp[:200])
+
+# List available programs for airdrop farming
+print("\n=== Current Solana Protocols (potential airdrops) ===")
+protocols = ["Jupiter", "Jito", "Marginfi", "Kamino", "Drift", "Zeta", "Parcl", "Tensor"]
+for p in protocols:
+    print(f"  - {p}")
+
+# Save results
+with open("result.txt", "w") as f:
+    f.write(f"PUBKEY: {pubkey}\n")
+    f.write(f"KEYPAIR_JSON: {kp}\n")
+    f.write(f"BALANCE: {result.stdout.strip()}\n")
+    f.write("Next: Use this keypair to interact with Solana protocols for airdrop eligibility\n")
