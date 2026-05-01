@@ -1,42 +1,78 @@
-import json, base64, os, requests
+import json, os, requests, time, random
 
-KP = [8, 201, 185, 57, 113, 84, 216, 128, 250, 235, 169, 101, 225, 211, 54, 48, 37, 220, 196, 86, 131, 117, 95, 74, 56, 50, 213, 69, 169, 34, 159, 98, 221, 201, 9, 6, 29, 57, 233, 161, 24, 32, 230, 188, 30, 178, 231, 237, 130, 251, 141, 81, 155, 163, 209, 5, 109, 190, 51, 98, 163, 170, 242, 90]
+RESULTS = {}
 
-print("=== Using existing keypair ===")
-print(f"Public Key: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21")
+# ========= LINE A: FAUCET FARMING =========
+print("=== FAUCET FARMING ===")
 
-# Try multiple faucets  
-print("\n=== Trying Devnet Faucets ===")
 faucets = [
-    ("Solana official", f"https://api.devnet.solana.com", 
-     {"jsonrpc":"2.0","method":"requestAirdrop","params":["Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21",1000000000],"id":1}),
-    ("QuickNode", "https://api.devnet.solana.com",
-     {"jsonrpc":"2.0","method":"requestAirdrop","params":["Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21",1000000000],"id":1}),
+    ("FreeBitco.in", "https://freebitco.in/?op=api&key=FAKE_KEY"),
+    ("FaucetPay", "https://faucetpay.io/api/v1/faucetlist"),
+    ("PipeFlare", "https://pipeflare.io/api/claim"),
 ]
 
-for name, url, payload in faucets:
+# Test which faucets are accessible
+for name, url in faucets:
     try:
-        r = requests.post(url, json=payload, timeout=10)
-        print(f"{name}: {r.status_code} - {r.text[:200]}")
+        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        RESULTS[name] = f"HTTP {r.status_code}"
+        print(f"  {name}: HTTP {r.status_code}")
     except Exception as e:
-        print(f"{name}: {e}")
+        RESULTS[name] = f"FAIL: {str(e)[:50]}"
 
-# Also try HTTP faucets
-print("\n=== HTTP Faucets ===")
-http_faucets = [
-    f"https://faucet.solana.com/api/request?address={pubkey}&amount=1000000000",
-    f"https://solfaucet.com/api/drip?address={pubkey}&amount=1&network=devnet",
-]
+# ========= LINE B: TEST CHINESE PLATFORMS =========
+print("\n=== LINE B: CHINESE PLATFORM ACCESS ===")
 
-for url in http_faucets:
+platforms = {
+    "猪八戒": "https://www.zbj.com",
+    "CSDN": "https://www.csdn.net",
+    "掘金": "https://juejin.cn",
+    "知乎": "https://www.zhihu.com",
+    "闲鱼": "https://www.goofish.com",
+    "百度知道": "https://zhidao.baidu.com",
+    "豆瓣": "https://www.douban.com",
+    "B站": "https://www.bilibili.com",
+}
+
+for name, url in platforms.items():
     try:
-        r = requests.get(url, timeout=10)
-        print(f"HTTP {r.status_code}: {r.text[:200]}")
+        r = requests.get(url, timeout=10, 
+                        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                                "Accept-Language": "zh-CN,zh;q=0.9"})
+        title = ""
+        if '<title>' in r.text:
+            title = r.text.split('<title>')[1].split('</title>')[0][:60]
+        print(f"  {name}: HTTP {r.status_code} | {title}")
+        RESULTS[name] = f"OK ({r.status_code})"
     except Exception as e:
-        print(f"HTTP: {e}")
+        print(f"  {name}: FAIL - {str(e)[:50]}")
+        RESULTS[name] = f"FAIL: {str(e)[:40]}"
 
-# Save result
+# ========= LINE C: TEST EMAIL-ONLY REGISTRATION =========
+print("\n=== LINE C: EMAIL-ONLY PLATFORMS ===")
+
+email_platforms = {
+    "GitLab": "https://gitlab.com/users/sign_up",
+    "Notion": "https://www.notion.so/signup",
+    "Medium": "https://medium.com/m/signin",
+    "Dev.to": "https://dev.to/enter",
+    "Hashnode": "https://hashnode.com/onboard",
+    "Substack": "https://substack.com/sign-in",
+    "Mirror.xyz": "https://mirror.xyz/dashboard",
+    "ProductHunt": "https://www.producthunt.com/signup",
+}
+
+for name, url in email_platforms.items():
+    try:
+        r = requests.get(url, timeout=10,
+                        headers={"User-Agent": "Mozilla/5.0"})
+        print(f"  {name}: HTTP {r.status_code}")
+        RESULTS[name] = f"OK ({r.status_code})"
+    except Exception as e:
+        RESULTS[name] = f"FAIL"
+
+# Save
 with open("result.txt", "w") as f:
-    f.write(f"PUBKEY: Fvku5CNSZAsV1yJiHK9Ji78oSGKYHpNT3pBbMztdaw21\n")
-    f.write(f"ATTEMPTED_FAUCETS: done\n")
-    f.write("NEXT: If got SOL, run protocol interactions\n")
+    json.dump(RESULTS, f, indent=2)
+    print(f"\n=== ALL DONE ===")
+    print(json.dumps(RESULTS, indent=2))
