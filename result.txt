@@ -1,0 +1,25 @@
+=== NETWORK TEST ===
+✅ google: HTTP 200
+   Text: <!doctype html><html itemscope="" itemtype="http://schema.org/WebPage" lang="en"><head><meta content
+✅ binance: HTTP 451
+✅ bsc_rpc: HTTP 400
+✅ solana_rpc: HTTP 200
+   Text: <!DOCTYPE html>
+<html lang="en">
+    <head><title>Solana RPC</title></head>
+    <body>
+        <p>
+ 
+✅ coingecko: HTTP 200
+   Data: {"bitcoin": {"usd": 77752}}
+✅ bountycaster: HTTP 404
+✅ dework: HTTP 200
+   Text: 
+✅ onlydust: HTTP 503
+❌ gitcoin: HTTPSConnectionPool(host='api.gitcoin.co', port=443): Max retries exceeded with 
+
+=== BOUNTYCASTER BOUNTIES ===
+
+=== ONLYDUST PROJECTS ===
+
+=== DONE ===
