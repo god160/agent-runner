@@ -1,4 +1,7 @@
-  File "/home/runner/work/agent-runner/agent-runner/task.py", line 25
-    apis = re.findall(r'https?://[^"\'\''<>\s]+api[^"\'\''<>\s]*', r.text)
-                                         ^^
-SyntaxError: invalid syntax
+=== 知乎发送验证码 ===
+Home: 200
+XSRF found: _xsrf=ef6ebbd6-5e3c-4625-b
+Captcha check: 200 - {"cookie":"capsion_ticket=2|1:0|10:1777639763|14:capsion_ticket|44:N2ZjYmI2NTM4ZDk3NGY0MjlkZGJjNTM0MjVkMjcyNTI=|d3f30ec484fd4587f6f06fb813c5851e907851c838f529efba9a524cae8ae0e1; Path=/; Domain=zhihu.c
+SMS request: 404
+Response: {"error":{"message":"URL 不存在","code":4040}}
+SMS v2: 404 - {"error":{"message":"URL 不存在","code":4040}}
