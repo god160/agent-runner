@@ -5,23 +5,25 @@ on:
       task:
         description: 'Task script to run'
         required: true
-  repository_dispatch:
-    types: [run-task]
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Install deps
+        run: pip install requests
+      
       - name: Run Task
+        run: python3 task.py 2>&1 | tee result.txt
+      
+      - name: Commit Result
         run: |
-          python3 task.py 2>&1 | tee result.txt
-      - name: Upload Result
-        run: |
-          echo "## Result" >> $GITHUB_STEP_SUMMARY
-          cat result.txt >> $GITHUB_STEP_SUMMARY
-      - name: Save Result as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: task-result
-          path: result.txt
+          git config user.name "agent-bot"
+          git config user.email "agent@bot.com"
+          git add result.txt
+          git commit -m "task result $(date +%s)" || true
+          git push
