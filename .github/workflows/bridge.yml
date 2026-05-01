@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: 'Task script to run'
+        description: 'Task'
         required: true
 
 jobs:
@@ -14,16 +14,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install deps
-        run: pip install requests
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
       
       - name: Run Task
         run: python3 task.py 2>&1 | tee result.txt
       
       - name: Commit Result
         run: |
-          git config user.name "agent-bot"
-          git config user.email "agent@bot.com"
-          git add result.txt
-          git commit -m "task result $(date +%s)" || true
-          git push
+          git config user.name "bot"
+          git config user.email "bot@bot.com"
+          git add result.txt screenshot.png 2>/dev/null || true
+          git commit -m "result" || true
+          git push || true
